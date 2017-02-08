@@ -1,1 +1,8 @@
 theme: jekyll-theme-minimal
+title: go-pconn
+description: Interactive persistent connection proxy in Go
+show_downloads: true
+google_analytics: UA-83808526-1
+exclude:
+  - Gemfile
+  - Gemfile.lock
