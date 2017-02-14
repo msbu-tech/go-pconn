@@ -74,12 +74,10 @@ func (c *Pconn) push(message []byte) {
 }
 
 func (c *Pconn) connect() error  {
-    if !c.hub.ConnExists(c.cuid) {
-        err := c.hub.AddConn(c.cuid, c)
-        if err != nil{
-            log.Println("connect error:", err)
-            return err
-        }
+    err := c.hub.AddConn(c.cuid, c)
+    if err != nil{
+        log.Println("connect error:", err)
+        return err
     }
     return nil
 }
