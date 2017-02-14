@@ -2,7 +2,6 @@ package pconn
 
 import (
     "log"
-    "sync"
     "time"
 
     "github.com/msbu-tech/go-pconn/hub"
@@ -12,7 +11,6 @@ import (
 
 //连接定义
 type Pconn struct {
-    sync.RWMutex    //锁
     rid string      //请求id
     cuid string     //uid
     timestamp int64 //建连时间戳
@@ -21,7 +19,7 @@ type Pconn struct {
     hub *hub.Hub    //连接所在的HUB
     c *websocket.Conn   //链接的ws指针
     connectedTimer *time.Timer  //连接计时器，用于关闭超时未发送connect的连接
-    closeChan chan bool //关闭连接的channel
+    connTimeoutChan chan bool
 }
 
 //新建连接，一般由Hub接收到连接请求时发起
@@ -33,14 +31,14 @@ func New(h *hub.Hub, conn *websocket.Conn) *Pconn  {
         timestamp: time.Now().Unix(),
         closed: false,
         connected: false,
-        closeChan: make(chan bool, 1),
+        connTimeoutChan: make(chan bool),
     }
 
     go c.run()
 
     //设置客户端未连接超时，用于清理建连接后未发请求的连接
     if true{
-        c.connectedTimer = time.AfterFunc(10 * time.Second, c.closeUnconnected)
+        c.connectedTimer = time.AfterFunc(10 * time.Second, c.connectTimeout)
     }
 
     return &c
@@ -50,13 +48,17 @@ func New(h *hub.Hub, conn *websocket.Conn) *Pconn  {
 func (c *Pconn) run() {
     for {
         select {
-        case <- c.closeChan:
-            log.Printf("connenction close, goroutine exit, rid: %s", c.rid)
-            return
+        case <- c.connTimeoutChan:
+            if !c.connected && !c.closed{
+                c.disconnect()
+                log.Printf("connenction timeout, goroutine exit, rid: %s", c.rid)
+                return
+            }
         default:
             _, message, err := c.c.ReadMessage()
             if err != nil {
                 log.Println("read:", err)
+                c.disconnect()
                 return
             }
             //TODO 解包，处理msg
@@ -79,32 +81,29 @@ func (c *Pconn) connect() error  {
         log.Println("connect error:", err)
         return err
     }
+    c.connected = true
     return nil
 }
 
 func (c *Pconn) disconnect() error {
     err :=c.c.Close()
+    log.Println("close ws connnection")
     if err != nil{
-        log.Println("disconnect error:", err)
+        log.Println("disconnect error[ws close]:", err)
         return err
     }
     err = c.hub.RemoveConn(c.cuid)
     if err != nil{
-        log.Println("disconnect error:", err)
+        log.Println("disconnect error[RemoveConn]:", err)
         return err
     }
+    c.closed = true
+
     log.Printf("disconnect link, rid: %s", c.rid)
-    c.closeChan <- true
     return nil
 }
 
-func (c *Pconn) closeUnconnected() {
-    c.RLock()
-    connected := c.connected
-    closed := c.closed
-    c.RUnlock()
-    if !connected && !closed{
-        c.disconnect()
-        log.Printf("close unconnected link, rid: %s", c.rid)
-    }
+func (c *Pconn) connectTimeout() {
+    c.connTimeoutChan <- true
+    log.Printf("close unconnected link, rid: %s", c.rid)
 }

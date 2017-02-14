@@ -23,7 +23,7 @@ func handler(w http.ResponseWriter, r *http.Request)  {
 }
 
 var addr = flag.String("addr", "localhost:8080", "http service address")
-var upgrader = websocket.Upgrader{} // use default options
+var upgrader = websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true },} // use default options
 
 func main()  {
     flag.Parse()
