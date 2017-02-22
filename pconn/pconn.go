@@ -30,17 +30,20 @@ func New(h *MyHub, conn *websocket.Conn) *Pconn {
 		hub:             h,
 		c:               conn,
 		timestamp:       time.Now().Unix(),
+		//test
+		cuid : string(time.Now().Unix()),
+		//test end
 		closed:          false,
 		connected:       false,
 		connTimeoutChan: make(chan bool),
 		pushChan:        make(chan msg.Message),
 	}
-
+	log.Printf("got a new connection. cuid: %s", c.cuid)
 	go c.run()
 
 	//设置客户端未连接超时，用于清理建连接后未发请求的连接
 	if true {
-		c.connectedTimer = time.AfterFunc(10*time.Second, c.connectTimeout)
+		c.connectedTimer = time.AfterFunc(1000*time.Second, c.connectTimeout)
 	}
 
 	return &c

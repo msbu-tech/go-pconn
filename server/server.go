@@ -32,8 +32,8 @@ func init() {
 }
 
 func StartPconnSrv() error {
-	log.Printf("start connSrv...")
-	log.Printf("connSrv listen at 127.0.0.1:8077...")
+	log.Println("start connSrv...")
+	log.Println("connSrv listen at 127.0.0.1:8077...")
 	go h.Run()
 	http.HandleFunc("/ws", serveWs)
 	err := http.ListenAndServe(conn_addr, nil)
@@ -45,8 +45,8 @@ func StartPconnSrv() error {
 }
 
 func StartPusherSrv() error {
-	log.Printf("start pusherSrv...")
-	log.Printf("pusherSrv listen at 127.0.0.1:8078...")
+	log.Println("start pusherSrv...")
+	log.Println("pusherSrv listen at 127.0.0.1:8078...")
 	http.HandleFunc("/push", servePush)
 	err := http.ListenAndServe(push_addr, nil)
 	if err != nil {
