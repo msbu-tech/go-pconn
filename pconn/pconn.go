@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	//"github.com/msbu-tech/go-pconn/base"
+	"github.com/msbu-tech/go-pconn/msg"
 	"github.com/satori/go.uuid"
 )
 
@@ -20,6 +20,7 @@ type Pconn struct {
 	c               *websocket.Conn //链接的ws指针
 	connectedTimer  *time.Timer     //连接计时器，用于关闭超时未发送connect的连接
 	connTimeoutChan chan bool
+	pushChan chan msg.Message
 }
 
 //新建连接，一般由Hub接收到连接请求时发起
@@ -32,6 +33,7 @@ func New(h *MyHub, conn *websocket.Conn) *Pconn {
 		closed:          false,
 		connected:       false,
 		connTimeoutChan: make(chan bool),
+		pushChan:        make(chan msg.Message),
 	}
 
 	go c.run()
@@ -46,6 +48,7 @@ func New(h *MyHub, conn *websocket.Conn) *Pconn {
 
 //请求主循环，监听ws的消息，和关闭链接的channel
 func (c *Pconn) run() {
+	var message = msg.Message{}
 	for {
 		select {
 		case <-c.connTimeoutChan:
@@ -53,6 +56,12 @@ func (c *Pconn) run() {
 				c.disconnect()
 				log.Printf("connenction timeout, goroutine exit, rid: %s", c.rid)
 				return
+			}
+		case message = <- c.pushChan:
+			err := c.push(&message)
+			if err != nil {
+				//todo 失败处理
+				log.Println("push error: ", err)
 			}
 		default:
 			_, message, err := c.c.ReadMessage()
@@ -67,12 +76,19 @@ func (c *Pconn) run() {
 	}
 }
 
-func (c *Pconn) push(message []byte) {
-	err := c.c.WriteMessage(websocket.TextMessage, message)
+func (c *Pconn) Push(messageStr string) {
+	message := msg.Message{Body:messageStr}
+	c.pushChan <- message
+}
+
+func (c *Pconn) push(message *msg.Message) error {
+	messageStr := message.Body
+	err := c.c.WriteMessage(websocket.TextMessage, []byte(messageStr))
 	if err != nil {
-		log.Println("write:", err)
-		//error
+		log.Println("write error:", err)
+		return err
 	}
+	return nil
 }
 
 func (c *Pconn) connect() error {

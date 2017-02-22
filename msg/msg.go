@@ -11,3 +11,7 @@ type PushMsgRes struct {
 	errno  int
 	errmsg string
 }
+
+type Message struct {
+	Body string
+}
