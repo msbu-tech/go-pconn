@@ -1,15 +1,15 @@
 package msg
 
 type PushMsgReq struct {
-	push_type  int
-	channel_id string
-	device_ids []string
-	message    string
+	Push_type  int
+	Channel_id string
+	Device_ids []string
+	Content    string
 }
 
 type PushMsgRes struct {
-	errno  int
-	errmsg string
+	Errno  int
+	Errmsg string
 }
 
 type Message struct {

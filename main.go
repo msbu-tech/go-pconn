@@ -16,8 +16,11 @@ var addr = flag.String("addr", "localhost:8080", "http service address")
 
 func main() {
 	flag.Parse()
-	log.Printf("addr: %s", *addr)
+	//log.Printf("addr: %s", *addr)
 	log.SetFlags(0)
 	//http.HandleFunc("/", handler)
-	log.Fatal(server.StartPconnSrv())
+	//log.Fatal(server.StartPconnSrv())
+	//log.Fatal(server.StartPusherSrv())
+	go server.StartPconnSrv()
+	server.StartPusherSrv()
 }

@@ -4,9 +4,10 @@ import (
 	//"fmt"
 	"log"
 	//"time"
-	"errors"
-	"net/http"
 	"encoding/json"
+	"errors"
+	"io/ioutil"
+	"net/http"
 
 	"github.com/gorilla/websocket"
 
@@ -31,6 +32,8 @@ func init() {
 }
 
 func StartPconnSrv() error {
+	log.Printf("start connSrv...")
+	log.Printf("connSrv listen at 127.0.0.1:8077...")
 	go h.Run()
 	http.HandleFunc("/ws", serveWs)
 	err := http.ListenAndServe(conn_addr, nil)
@@ -38,20 +41,19 @@ func StartPconnSrv() error {
 		log.Fatal("StartPconnSrv ListenAndServe: ", err)
 		return errors.New("StartPconnSrv ListenAndServe failed...")
 	}
-	log.Println("start connSrv success...")
-	log.Println("connSrv listen at 127.0.0.1:8077...")
 	return nil
 }
 
 func StartPusherSrv() error {
+	log.Printf("start pusherSrv...")
+	log.Printf("pusherSrv listen at 127.0.0.1:8078...")
 	http.HandleFunc("/push", servePush)
 	err := http.ListenAndServe(push_addr, nil)
 	if err != nil {
 		log.Fatal("StartPusherSrv ListenAndServe failed...")
 		return errors.New("StartPusherSrv failed...")
 	}
-	log.Println("start pusherSrv success...")
-	log.Println("pusherSrv listen at 127.0.0.1:8078...")
+	return nil
 }
 
 func serveWs(w http.ResponseWriter, r *http.Request) {
@@ -74,20 +76,20 @@ func servePush(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	log.Println(push_req.message)
-	for _, device_id := range push_req.device_ids {
-		c = h.GetPconn(device_id)
+	log.Printf(push_req.Content)
+	for _, device_id := range push_req.Device_ids {
+		c := h.GetPconn(device_id)
 		if c == nil {
 			log.Println("Conn is not exists, device_id: ", device_id)
 			continue
 		}
-		c.Push(push_req.message)
+		c.Push(push_req.Content)
 	}
 	push_res := msg.PushMsgRes{
-		errno: 0
-		errmsg: "Success"
+		Errno:  0,
+		Errmsg: "Success",
 	}
-	b, err = json.Marshal(push_res)
+	b, err := json.Marshal(push_res)
 	if err != nil {
 		panic(err)
 	}
