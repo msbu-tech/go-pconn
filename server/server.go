@@ -6,36 +6,52 @@ import (
 	//"time"
 	"errors"
 	"net/http"
+	"encoding/json"
 
 	"github.com/gorilla/websocket"
 
 	//"github.com/msbu-tech/go-pconn/hub"
+	"github.com/msbu-tech/go-pconn/msg"
 	"github.com/msbu-tech/go-pconn/pconn"
 )
 
 var (
-	upgrader websocket.Upgrader
-	h        *pconn.MyHub
-	addr     string
+	upgrader  websocket.Upgrader
+	h         *pconn.MyHub
+	conn_addr string
+	push_addr string
 )
 
 func init() {
 	upgrader = websocket.Upgrader{}
 	h = pconn.NewHub()
-	addr = ":8079"
+	conn_addr = ":8077"
+	push_addr = ":8078"
+
 }
 
 func StartPconnSrv() error {
 	go h.Run()
 	http.HandleFunc("/ws", serveWs)
-	err := http.ListenAndServe(addr, nil)
+	err := http.ListenAndServe(conn_addr, nil)
 	if err != nil {
-		log.Fatal("ListenAndServe: ", err)
-		return errors.New("ListenAndServe failed...")
+		log.Fatal("StartPconnSrv ListenAndServe: ", err)
+		return errors.New("StartPconnSrv ListenAndServe failed...")
 	}
 	log.Println("start connSrv success...")
-	log.Println("connSrv listen at 127.0.0.1:8089...")
+	log.Println("connSrv listen at 127.0.0.1:8077...")
 	return nil
+}
+
+func StartPusherSrv() error {
+	http.HandleFunc("/push", servePush)
+	err := http.ListenAndServe(push_addr, nil)
+	if err != nil {
+		log.Fatal("StartPusherSrv ListenAndServe failed...")
+		return errors.New("StartPusherSrv failed...")
+	}
+	log.Println("start pusherSrv success...")
+	log.Println("pusherSrv listen at 127.0.0.1:8078...")
 }
 
 func serveWs(w http.ResponseWriter, r *http.Request) {
@@ -45,4 +61,36 @@ func serveWs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	pconn.New(h, c)
+}
+
+func servePush(w http.ResponseWriter, r *http.Request) {
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		panic(err)
+	}
+	log.Println(string(body))
+	var push_req msg.PushMsgReq
+	err = json.Unmarshal(body, &push_req)
+	if err != nil {
+		panic(err)
+	}
+	log.Println(push_req.message)
+	for _, device_id := range push_req.device_ids {
+		c = h.GetPconn(device_id)
+		if c == nil {
+			log.Println("Conn is not exists, device_id: ", device_id)
+			continue
+		}
+		c.Push(push_req.message)
+	}
+	push_res := msg.PushMsgRes{
+		errno: 0
+		errmsg: "Success"
+	}
+	b, err = json.Marshal(push_res)
+	if err != nil {
+		panic(err)
+	}
+	w.Header().Set("Content-Type", "text/json")
+	w.Write(b)
 }
