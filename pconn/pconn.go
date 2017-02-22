@@ -58,7 +58,7 @@ func (c *Pconn) run() {
 				return
 			}
 		case message = <- c.pushChan:
-			err := c.push(message.Body)
+			err := c.push(&message)
 			if err != nil {
 				//todo 失败处理
 				log.Println("push error: ", err)
@@ -76,12 +76,14 @@ func (c *Pconn) run() {
 	}
 }
 
-func (c *Pconn) Push(message msg.Message) {
+func (c *Pconn) Push(messageStr string) {
+	message := msg.Message{Body:messageStr}
 	c.pushChan <- message
 }
 
-func (c *Pconn) push(message string) error {
-	err := c.c.WriteMessage(websocket.TextMessage, []byte(message))
+func (c *Pconn) push(message *msg.Message) error {
+	messageStr := message.Body
+	err := c.c.WriteMessage(websocket.TextMessage, []byte(messageStr))
 	if err != nil {
 		log.Println("write error:", err)
 		return err
