@@ -5,12 +5,14 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	//"github.com/msbu-tech/go-pconn/base"
+	"github.com/msbu-tech/go-pconn/msg"
 	"github.com/satori/go.uuid"
+	"sync"
 )
 
 //连接定义
 type Pconn struct {
+	sync.Mutex
 	rid             string          //请求id
 	cuid            string          //uid
 	timestamp       int64           //建连时间戳
@@ -20,6 +22,7 @@ type Pconn struct {
 	c               *websocket.Conn //链接的ws指针
 	connectedTimer  *time.Timer     //连接计时器，用于关闭超时未发送connect的连接
 	connTimeoutChan chan bool
+	pushChan chan msg.Message
 }
 
 //新建连接，一般由Hub接收到连接请求时发起
@@ -29,16 +32,22 @@ func New(h *MyHub, conn *websocket.Conn) *Pconn {
 		hub:             h,
 		c:               conn,
 		timestamp:       time.Now().Unix(),
+		//test
+		cuid : uuid.NewV1().String(),
+		//test end
 		closed:          false,
 		connected:       false,
 		connTimeoutChan: make(chan bool),
+		pushChan:        make(chan msg.Message),
 	}
+	log.Printf("got a new connection. cuid: %v", c.cuid)
+	c.connect()
 
 	go c.run()
 
 	//设置客户端未连接超时，用于清理建连接后未发请求的连接
 	if true {
-		c.connectedTimer = time.AfterFunc(10*time.Second, c.connectTimeout)
+		c.connectedTimer = time.AfterFunc(1000*time.Second, c.connectTimeout)
 	}
 
 	return &c
@@ -67,12 +76,21 @@ func (c *Pconn) run() {
 	}
 }
 
-func (c *Pconn) push(message []byte) {
-	err := c.c.WriteMessage(websocket.TextMessage, message)
+func (c *Pconn) Push(messageStr string) {
+	message := msg.Message{Body:messageStr}
+	c.Lock()
+	c.push(&message)
+	c.Unlock()
+}
+
+func (c *Pconn) push(message *msg.Message) error {
+	messageStr := message.Body
+	err := c.c.WriteMessage(websocket.TextMessage, []byte(messageStr))
 	if err != nil {
-		log.Println("write:", err)
-		//error
+		log.Println("write error:", err)
+		return err
 	}
+	return nil
 }
 
 func (c *Pconn) connect() error {
