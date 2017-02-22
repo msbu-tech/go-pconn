@@ -61,7 +61,7 @@ func (c *Pconn) run() {
 			err := c.push(message.Body)
 			if err != nil {
 				//todo 失败处理
-				log.Println("push error", err)
+				log.Println("push error: ", err)
 			}
 		default:
 			_, message, err := c.c.ReadMessage()
