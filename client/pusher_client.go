@@ -16,7 +16,7 @@ var (
 	push_req = msg.PushMsgReq{
 		Push_type:  0,
 		Channel_id: "baiduyiliaoshiyebu",
-		Device_ids: []string{"hanpeng", "zhangwanlong"},
+		Device_ids: []string{"81", "7fbd15f1-f8e6-11e6-ae3f-a45e60c0c79d"},
 		Content:    "Hello World",
 	}
 )

@@ -45,7 +45,7 @@ func runClient() {
 		}
 	}()
 
-	ticker := time.NewTicker(time.Second)
+	ticker := time.NewTicker(20*time.Second)
 	defer ticker.Stop()
 
 	for {
@@ -76,11 +76,15 @@ func runClient() {
 }
 
 func main() {
-	for i := 1; i < 1000; i++ {
+	for i := 1; i < 10; i++ {
 		go runClient()
 	}
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, os.Interrupt)
 	select {
 	case <-time.After(1000 * time.Second):
+	case <-interrupt:
+		return
 
 	}
 

@@ -7,10 +7,12 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/msbu-tech/go-pconn/msg"
 	"github.com/satori/go.uuid"
+	"sync"
 )
 
 //连接定义
 type Pconn struct {
+	sync.Mutex
 	rid             string          //请求id
 	cuid            string          //uid
 	timestamp       int64           //建连时间戳
@@ -31,14 +33,16 @@ func New(h *MyHub, conn *websocket.Conn) *Pconn {
 		c:               conn,
 		timestamp:       time.Now().Unix(),
 		//test
-		cuid : string(time.Now().Unix()),
+		cuid : uuid.NewV1().String(),
 		//test end
 		closed:          false,
 		connected:       false,
 		connTimeoutChan: make(chan bool),
 		pushChan:        make(chan msg.Message),
 	}
-	log.Printf("got a new connection. cuid: %s", c.cuid)
+	log.Printf("got a new connection. cuid: %v", c.cuid)
+	c.connect()
+
 	go c.run()
 
 	//设置客户端未连接超时，用于清理建连接后未发请求的连接
@@ -51,7 +55,6 @@ func New(h *MyHub, conn *websocket.Conn) *Pconn {
 
 //请求主循环，监听ws的消息，和关闭链接的channel
 func (c *Pconn) run() {
-	var message = msg.Message{}
 	for {
 		select {
 		case <-c.connTimeoutChan:
@@ -59,12 +62,6 @@ func (c *Pconn) run() {
 				c.disconnect()
 				log.Printf("connenction timeout, goroutine exit, rid: %s", c.rid)
 				return
-			}
-		case message = <- c.pushChan:
-			err := c.push(&message)
-			if err != nil {
-				//todo 失败处理
-				log.Println("push error: ", err)
 			}
 		default:
 			_, message, err := c.c.ReadMessage()
@@ -81,7 +78,9 @@ func (c *Pconn) run() {
 
 func (c *Pconn) Push(messageStr string) {
 	message := msg.Message{Body:messageStr}
-	c.pushChan <- message
+	c.Lock()
+	c.push(&message)
+	c.Unlock()
 }
 
 func (c *Pconn) push(message *msg.Message) error {
