@@ -121,6 +121,7 @@ func (c *Pconn) processChan()  {
 				c.connect(cMsg.GetCuid())
 			case Disconnect:
 				c.disconnect()
+                return
 			case Message:
                 //TODO 解析msg，连接后端，转发请求
 				log.Printf("got client message: %s", cMsg.GetBody())
