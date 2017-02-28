@@ -53,6 +53,14 @@ func (h *MyHub) GetPconn(cuid string) *Pconn {
 	return nil
 }
 
+func (h *MyHub) GetCuidList() []string {
+	cuid_list := make([]string, len(h.pconn_pool))
+	for k := range h.pconn_pool {
+		cuid_list = append(cuid_list, k)
+	}
+	return cuid_list
+}
+
 func NewHub() *MyHub {
 	return &MyHub{
 		pconn_pool: make(map[string]*Pconn),

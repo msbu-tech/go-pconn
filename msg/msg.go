@@ -21,17 +21,24 @@ type PushMsg struct {
 	Body string
 }
 
+type PconnQueryMsgRes struct {
+	Errno       int
+	Errmsg      string
+	Pconn_Count int
+	Device_ids  []string
+}
+
 func (p *PushMsg) ToString() string {
 	return p.Body
 }
 
-func (p *PushMsg) SetContent(content string)  {
+func (p *PushMsg) SetContent(content string) {
 	p.Body = content
 }
 
 type ClientMsg struct {
 	Cuid string `json:"cuid"`
-	Cmd string  `json:"cmd"`
+	Cmd  string `json:"cmd"`
 	Body string `json:"body"`
 }
 
@@ -39,15 +46,15 @@ func (c *ClientMsg) GetCuid() string {
 	return c.Cuid
 }
 
-func (c *ClientMsg) GetCmd() string  {
+func (c *ClientMsg) GetCmd() string {
 	return c.Cmd
 }
 
-func (c *ClientMsg) GetBody() string  {
+func (c *ClientMsg) GetBody() string {
 	return c.Body
 }
 
-func NewClientMsg(msg string, cMsg *ClientMsg)  error {
+func NewClientMsg(msg string, cMsg *ClientMsg) error {
 	err := json.Unmarshal([]byte(msg), cMsg)
 	log.Printf("%v", cMsg)
 	if err != nil {
