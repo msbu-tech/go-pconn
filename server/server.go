@@ -24,7 +24,7 @@ var (
 )
 
 func init() {
-	upgrader = websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true },}
+	upgrader = websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}
 	h = pconn.NewHub()
 	conn_addr = ":8077"
 	push_addr = ":8078"
@@ -48,6 +48,7 @@ func StartPusherSrv() error {
 	log.Println("start pusherSrv...")
 	log.Println("pusherSrv listen at 127.0.0.1:8078...")
 	http.HandleFunc("/push", servePush)
+	http.HandleFunc("/connquery", connQuery)
 	err := http.ListenAndServe(push_addr, nil)
 	if err != nil {
 		log.Fatal("StartPusherSrv ListenAndServe failed...")
@@ -90,6 +91,23 @@ func servePush(w http.ResponseWriter, r *http.Request) {
 		Errmsg: "Success",
 	}
 	b, err := json.Marshal(push_res)
+	if err != nil {
+		panic(err)
+	}
+	w.Header().Set("Content-Type", "text/json")
+	w.Write(b)
+}
+
+func connQuery(w http.ResponseWriter, r *http.Request) {
+	cuid_list := h.GetCuidList()
+	pconn_count := len(cuid_list)
+	pconn_query_res := msg.PconnQueryMsgRes{
+		Errno:       0,
+		Errmsg:      "Success",
+		Pconn_Count: pconn_count,
+		Device_ids:  cuid_list,
+	}
+	b, err := json.Marshal(pconn_query_res)
 	if err != nil {
 		panic(err)
 	}
